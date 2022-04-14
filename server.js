@@ -40,12 +40,18 @@ let userList = new Map();
 // passing an event
 // connection event
 
+
+let senderID;
+let reciverID;
+let receiverName;
+let senderName;
+
 io.on('connection', (socket) => {
     // the socket variable that we get has the information about your the client 
     // to get the username when connected 
     // console.log("a user is connected");
     let userName = socket.handshake.query.userName;
-    console.log("a user is connected" + userName);
+    console.log("a user is connected " + userName);
 
     addUser(userName, socket.id);
 
@@ -55,30 +61,68 @@ io.on('connection', (socket) => {
     socket.broadcast.emit('user-list', [...userList.keys()]);
 
     // to emit the user for only an indiviual  we gonna emit the same but without broadcasting
+    // socket.emit('user-list', [...userList.keys()]);
     socket.emit('user-list', [...userList.keys()]);
 
-    // now to get the message event and broadcast it as the message 
-    socket.on('message', (msg) => {
-        socket.broadcast.emit('message-broadcast', { message: msg, userName: userName });
-    })
+    // listening for the selected user
+    socket.on("onUserSelected", (arg) => {
+        console.log("Sender Name: " + arg.senderName + " & " + "Send ID: " + userList.get(arg.senderName));
+        console.log("Reciver Name: " + arg.receiverName + " & " + "Receiver ID: " + userList.get(arg.receiverName));
+        receiverName = arg.receiverName;
+        senderName = arg.senderName;
+        reciverID = userList.get(arg.receiverName);
 
+    });
+
+
+
+    // now to get the message event and broadcast it as the message 
+    // socket.on('message', (msg) => {
+    //     socket.broadcast.emit('message-broadcast', { message: msg, userName: userName });
+    // })
+
+    socket.on("private message", (content) => {
+        socket.to(reciverID).emit("private message", {
+            message: content,
+            senderName: senderName,
+        });
+    });
 
 
     socket.on('disconnect', (reason) => {
         removeUser(userName, socket.id);
+
     })
+    // private messaging
+    // socket.on("private message", ({ content, to }) => {
+    //     // userList={'username':'userId'};
+    //     // userList.
+    //     // 
+    //     console.log(userList)
+    //     console.log(to);
+    //     let indUserName = userList.get(to);
+    //     console.log("this is it:"+indUserName);
+    //     socket.to(indUserName).emit("private message", {
+    //         message:content,            
+    //     });
+
 });
+
 
 
 // function to add user 
 function addUser(userName, id) {
     // if the userList don't have a username then add the user to userList
+    console.log(id);
     if (!userList.has(userName)) {
-        userList.set(userName, new Set(id));
+        userList.set(userName, (id));
+
     }
     //    if he already exist in the list we add a new id to the map
     else {
-        userList.get(userName).add(id);
+        userList.set(userName,id);
+   
+
     }
 }
 
@@ -93,8 +137,13 @@ function removeUser(userName, id) {
     }
 }
 
+
+
+
 // http server is listening on the port 3000
 http.listen(process.env.PORT || 3000, () => {
     console.log(`Server is running ${process.env.PORT || 3000}`);
 });
+
+
 
